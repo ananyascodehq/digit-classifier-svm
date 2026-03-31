@@ -13,7 +13,7 @@ license: mit
 
 A high-performance, real-time handwritten digit recognition system built with **FastAPI**, **React**, and **Scikit-Learn**. This application uses a Support Vector Machine (SVM) to classify hand-drawn digits with ~98% accuracy.
 
-![Preview](https://raw.githubusercontent.com/ananyascodehq/digit-classifier-svm/main/screenshot.png) *(Note: Add your own screenshot path here)*
+![Preview](assets\image.png)
 
 ## 🚀 Live Demo
 Experience the real-time classifier on **Hugging Face Spaces**: [View Space](https://huggingface.co/spaces/ananyakannan/digit-classifier-svm)
