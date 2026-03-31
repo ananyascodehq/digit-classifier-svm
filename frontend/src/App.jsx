@@ -85,7 +85,7 @@ const Recognizer = () => {
       const formData = new FormData();
       formData.append('file', blob, 'digit.png');
       
-      const response = await axios.post('/api/predict-image', formData, {
+      const response = await axios.post('api/predict-image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -150,8 +150,8 @@ const Dashboard = () => {
   
   useEffect(() => {
     Promise.all([
-      axios.get('/api/eda'),
-      axios.get('/api/analytics')
+      axios.get('api/eda'),
+      axios.get('api/analytics')
     ]).then(([edaRes, analyticsRes]) => {
       setEda(edaRes.data)
       setAnalytics(analyticsRes.data)
