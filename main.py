@@ -25,7 +25,9 @@ def load_assets():
     global clf, scaler, analytics_cache
     print("[LOG] Starting asset load...")
     try:
-        model_dir = os.path.join(os.getcwd(), 'model')
+        # Use absolute path relative to this file
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        model_dir = os.path.join(base_dir, 'model')
         clf_path = os.path.join(model_dir, 'svm_model.pkl')
         scaler_path = os.path.join(model_dir, 'scaler.pkl')
         
@@ -37,6 +39,8 @@ def load_assets():
             compute_eda()
         else:
             print(f"[ERROR] Assets missing in: {model_dir}")
+            if os.path.exists(model_dir):
+                print(f"[LOG] Model dir contents: {os.listdir(model_dir)}")
     except Exception as e:
         print(f"[ERROR] Failed to load assets: {e}")
         traceback.print_exc()
@@ -97,6 +101,7 @@ def compute_analytics():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Perform heavy initialization in the background
     load_assets()
     yield
 
@@ -122,74 +127,43 @@ async def get_analytics(): return analytics_cache
 
 @app.post("/api/predict-image")
 async def predict_image(file: UploadFile = File(...)):
-    print(f"[LOG] Received prediction request. Content-Type: {file.content_type}")
-    
     if clf is None or scaler is None:
         return {"error": "Models not loaded on server", "status": "fail"}
-
     try:
-        # 1. Read input
         contents = await file.read()
-        print(f"[LOG] Payload size: {len(contents)} bytes")
-        
-        # 2. Open and convert
         img = Image.open(io.BytesIO(contents)).convert('L')
-        img_array = 255 - np.array(img) # Invert
-        print(f"[LOG] Raw image shape: {img_array.shape}")
-
-        # 3. Process strokes
+        img_array = 255 - np.array(img)
         binary_mask = img_array > 50
         struct_size = max(1, img_array.shape[0] // 30)
         struct = np.ones((struct_size, struct_size), dtype=bool)
         dilated = binary_dilation(binary_mask, structure=struct)
         img_array = dilated.astype(np.uint8) * 255
-        
-        # 4. Crop
         rows = np.any(img_array > 0, axis=1)
         cols = np.any(img_array > 0, axis=0)
-        if not rows.any():
-            print("[LOG] Empty canvas detected.")
-            return {"prediction": 0, "status": "empty"}
-            
+        if not rows.any(): return {"prediction": 0, "status": "empty"}
         rmin, rmax = np.where(rows)[0][[0, -1]]
         cmin, cmax = np.where(cols)[0][[0, -1]]
         digit_crop = img_array[rmin:rmax+1, cmin:cmax+1]
-        
-        # 5. Normalize shape (8x8)
         pad = max(digit_crop.shape) // 4
         digit_padded = np.pad(digit_crop, pad_width=pad, mode='constant', constant_values=0)
         pil_resized = Image.fromarray(digit_padded).resize((8, 8), Image.Resampling.LANCZOS)
-        
-        # 6. Feature vector (1, 64)
-        img_8x8 = np.array(pil_resized, dtype=np.float64)
-        img_8x8 = (img_8x8 / 255.0) * 16.0 # Match sklearn digits 0-16 range
+        img_8x8 = (np.array(pil_resized, dtype=np.float64) / 255.0) * 16.0
         features = img_8x8.reshape(1, -1)
-        print(f"[LOG] Processed feature shape: {features.shape}")
-        
-        # 7. Predict
         scaled_features = scaler.transform(features)
         prediction = clf.predict(scaled_features)
-        print(f"[LOG] Prediction result: {prediction[0]}")
-        
         return {"prediction": int(prediction[0]), "status": "success"}
-
     except Exception as e:
-        print("[ERROR] Prediction endpoint failed!")
+        print("[ERROR] Prediction failed")
         traceback.print_exc()
-        return {
-            "error": str(e), 
-            "trace": traceback.format_exc(),
-            "status": "fail"
-        }
+        return {"error": str(e), "status": "fail"}
 
-# Setup Static Serving
-frontend_dist = os.path.join(os.getcwd(), "frontend", "dist")
+# PASSIVE CONFIGURATION: Setup Static Serving
+# This runs at import time but does not block the process
+frontend_dist = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
 if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 else:
     print(f"[WARNING] Static folder not found at {frontend_dist}")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+# NO uvicorn.run here. Process is managed by Docker CMD.
