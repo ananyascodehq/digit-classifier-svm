@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import joblib
 import numpy as np
 from PIL import Image
@@ -21,6 +23,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serves static files for production
+frontend_dist = os.path.join(os.getcwd(), "frontend", "dist")
+if os.path.exists(frontend_dist):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+    @app.get("/")
+    async def serve_frontend():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+    @app.get("/{full_path:path}")
+    async def catch_all(full_path: str):
+        # If it starts with /api (reserved for backend), let it through (will 404 if missing)
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404)
+        
+        # All other routes serve index.html for SPA routing
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    print(f"Warning: Frontend dist folder not found at {frontend_dist}. UI will not be served by FastAPI.")
 
 # Global assets
 clf = None
