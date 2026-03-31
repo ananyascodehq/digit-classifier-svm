@@ -208,7 +208,7 @@ const Dashboard = () => {
              <TrendingUp size={18} /> Support Vector Analysis
           </h3>
           <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Projection of samples onto the top 2 Principal Components. The line represents the best fit orientation of data flow.
+            Projection of 64D digit features into 2D space using PCA. Points clustered together share similar pixel distributions, while distance between clusters shows how distinct the SVM separates different digit classes.
           </p>
           <div style={{ width: '100%', height: 350 }}>
             <ResponsiveContainer>
@@ -221,17 +221,6 @@ const Dashboard = () => {
                   cursor={{ strokeDasharray: '3 3' }}
                 />
                 
-                {/* Fitted Line */}
-                <Line 
-                  data={analytics.line_data} 
-                  dataKey="y" 
-                  stroke="#ef4444" 
-                  strokeWidth={2} 
-                  strokeDasharray="5 5" 
-                  dot={false}
-                  activeDot={false}
-                  name="Best Fit Line"
-                />
 
                 {/* PCA Points */}
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -252,7 +241,7 @@ const Dashboard = () => {
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
              <Grid size={18} /> Error Confusion Matrix (10x10)
           </h3>
-          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Distribution of classification errors across the hidden 20% test dataset.</p>
+          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Visualizes predictive accuracy. Diagonal values (blue) show correct classifications, while off-diagonal values (red) pinpoint exactly which digits the SVM is confusing during the testing phase.</p>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(1, 1fr)', 
@@ -297,7 +286,8 @@ const Dashboard = () => {
       <div className="dashboard-grid" style={{ marginTop: '2rem' }}>
         {/* Class Distribution (Simplified) */}
         <div className="chart-card" style={{ gridColumn: 'span 2' }}>
-          <h3 style={{ fontSize: '1rem' }}>Support Count Class Balance</h3>
+          <h3 style={{ fontSize: '1rem' }}>Support Count (Dataset Balance)</h3>
+          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>Ensures the training set isn't biased. A balanced distribution (roughly 180 samples per digit) ensures the SVM learns unique features for all numbers equally.</p>
           <div style={{ width: '100%', height: 180 }}>
             <ResponsiveContainer>
               <BarChart data={eda.class_distribution}>

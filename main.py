@@ -74,11 +74,6 @@ def compute_analytics():
         indices = np.random.choice(len(X_pca), min(400, len(X_pca)), replace=False)
         pca_data = [{"x": round(float(X_pca[idx][0]), 3), "y": round(float(X_pca[idx][1]), 3), "label": int(y[idx])} for idx in indices]
         
-        x_pts = X_pca[indices, 0]
-        y_pts = X_pca[indices, 1]
-        coeffs = np.polyfit(x_pts, y_pts, 1)
-        line_data = [{"x": float(np.min(x_pts)), "y": float(coeffs[0] * np.min(x_pts) + coeffs[1])}, {"x": float(np.max(x_pts)), "y": float(coeffs[0] * np.max(x_pts) + coeffs[1])}]
-
         _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=42)
         X_test_scaled = scaler.transform(X_test)
         y_pred = clf.predict(X_test_scaled)
@@ -91,7 +86,6 @@ def compute_analytics():
 
         analytics_cache = {
             "pca_data": pca_data,
-            "line_data": line_data,
             "confusion_matrix": cm_data,
             "accuracy": round(float(clf.score(X_test_scaled, y_test)), 4)
         }
